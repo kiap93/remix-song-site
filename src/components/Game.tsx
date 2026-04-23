@@ -176,12 +176,19 @@ export function Game({ audioUrl, beatmap, onComplete, onStop }: { audioUrl: stri
       }
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && isPlaying && !isPaused) {
+        handleQuitRequest();
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('touchstart', handleTouchStart, { passive: false });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd);
     window.addEventListener('touchcancel', handleTouchEnd);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     let animationFrameId: number;
     
@@ -323,6 +330,7 @@ export function Game({ audioUrl, beatmap, onComplete, onStop }: { audioUrl: stri
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('touchcancel', handleTouchEnd);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animationFrameId);
     };
   }, [isPlaying, isPaused, showQuitConfirm, showResetConfirm]);
@@ -400,27 +408,27 @@ export function Game({ audioUrl, beatmap, onComplete, onStop }: { audioUrl: stri
           className="border border-zinc-800 rounded-lg shadow-2xl bg-zinc-950 max-w-full h-auto max-h-[100dvh]" 
         />
         
-        {/* Top Management Controls */}
-        <div className="absolute top-4 left-4 flex gap-2 z-10">
+        {/* Management Controls */}
+        <div className="absolute bottom-4 left-4 md:top-4 md:bottom-auto md:left-4 flex gap-2 z-10 scale-90 md:scale-100 origin-bottom-left md:origin-top-left">
           <button 
             onClick={handleQuitRequest}
-            className="p-2 bg-zinc-900/80 hover:bg-red-500/20 text-zinc-400 hover:text-red-500 rounded-full backdrop-blur-sm transition-all border border-zinc-800 group"
+            className="p-3 md:p-2 bg-zinc-900/90 md:bg-zinc-900/80 hover:bg-red-500/20 text-zinc-400 hover:text-red-500 rounded-full backdrop-blur-md transition-all border border-zinc-800 group shadow-lg"
             title="Quit Game"
           >
             <X className="w-6 h-6" />
           </button>
           <button 
             onClick={handleResetRequest}
-            className="p-2 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-full backdrop-blur-sm transition-all border border-zinc-800"
+            className="p-3 md:p-2 bg-zinc-900/90 md:bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-full backdrop-blur-md transition-all border border-zinc-800 shadow-lg"
             title="Restart Track"
           >
             <RotateCcw className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="absolute top-4 right-4 text-zinc-500 text-sm text-right bg-zinc-900/80 p-2 rounded-lg backdrop-blur-sm">
-          <p className="hidden md:block">Use Arrow Keys to play</p>
-          <p className="md:hidden">Swipe Left, Down, Up, Right to play</p>
+        <div className="absolute bottom-4 right-4 md:top-4 md:bottom-auto md:right-4 text-zinc-500 text-[10px] md:text-sm text-right bg-zinc-900/70 md:bg-zinc-900/80 p-2 rounded-lg backdrop-blur-md pointer-events-none border border-zinc-800/50 shadow-lg">
+          <p className="hidden md:block text-zinc-400">Use Arrow Keys</p>
+          <p className="md:hidden">Swipe Left, Down, Up, Right</p>
         </div>
 
         {/* Confirmation Modals */}
