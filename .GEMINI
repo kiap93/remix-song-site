@@ -1,0 +1,114 @@
+## Coding/documenting guidelines
+
+* Create a file per feature or related features, split as much as possible in different files;
+* add docstrings to all functions to explain what they do;
+* start each file with a long comment explaining in detail what the feature is about and the different use cases;
+* maintain a `Design.md` document at the root of the app that documents all the features of the app;
+* log as info all function calls (with their parameters) and log all genai calls with all their parameters (model used, prompt, config) and their outputs, just strip inline data;
+* group all configurable items (like model names) in a centralized file;
+* always create a way to test the scripts without altering the data;
+
+
+## Using Lyria models
+
+Here is a complete guide on how to use the Lyria models to generate audio using the `@google/genai` JavaScript SDK.
+
+### 1. Setup and Initialization
+First, you need to import the required classes from the SDK and initialize the client with your API key.
+
+```typescript
+import { GoogleGenAI, Modality } from "@google/genai";
+
+// Initialize the SDK with your API key
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+```
+
+### 2. Choosing the Right Model
+The application uses two distinct Lyria models depending on the desired track length:
+* **`lyria-3-pro-preview`**: Used for full-length tracks (referred to as "Lyria Pro" in the app).
+* **`lyria-3-clip-preview`**: Used for shorter, 30-second clips (referred to as "Lyria Clip").
+
+### 3. Formatting the Input
+You can provide text instructions and even combine them with an image to guide the generation. 
+
+* **Text Prompting**: The app structures prompts by stating the duration, the musical context, and specific lyrics instructions (e.g., whether to use custom lyrics, generate timing markers, or make it strictly instrumental).
+* **Image Prompting**: If using an image to influence the sound, you pass it as `inlineData` alongside the text prompt inside a `parts` array.
+
+```typescript
+const promptText = `Generate a 30-second track. \nContext: "A cinematic track". \nGenerate lyrics with precise [seconds:] timing markers.`;
+
+// For text-only generation
+const contents = promptText; 
+
+// OR, for multimodal generation (Text + Image)
+const multimodalContents = { 
+  parts: [
+    { text: promptText }, 
+    { inlineData: { data: "BASE64_IMAGE_DATA", mimeType: "image/jpeg" } }
+  ] 
+};
+```
+
+### 4. Calling the Model (Streaming)
+Because audio generation can take time, the application streams the response using `generateContentStream`. You must specify `Modality.AUDIO` in the configuration to ensure the model returns audio data.
+
+```typescript
+const responseStream = await ai.models.generateContentStream({ 
+  model: 'lyria-3-pro-preview', // or 'lyria-3-clip-preview'
+  contents: contents, 
+  config: { 
+    responseModalities: [Modality.AUDIO] 
+  } 
+});
+```
+
+### 5. Processing the Stream
+The models return a multimodal response stream containing both the text (lyrics and metadata) and the encoded audio chunks. You need to accumulate both as the stream progresses.
+
+```typescript
+let audioAccumulator = ""; 
+let textAccumulator = ""; 
+let mimeType = "audio/wav"; 
+
+for await (const chunk of responseStream) {
+  const parts = chunk.candidates?.[0]?.content?.parts;
+  if (!parts) continue;
+  
+  for (const part of parts) {
+    // 1. Extract Audio Chunks
+    if (part.inlineData?.data) { 
+      if (!audioAccumulator && part.inlineData.mimeType) {
+        mimeType = part.inlineData.mimeType; 
+      }
+      audioAccumulator += part.inlineData.data; 
+    }
+    
+    // 2. Extract Lyrics & Metadata
+    if (part.text) {
+      textAccumulator += part.text;
+    }
+  }
+}
+```
+
+### 6. Converting Base64 to Playable Audio
+Once the stream completes, the `audioAccumulator` will contain a massive base64 string. To play it in the browser, you must decode it into a binary format and create a Blob URL.
+
+```typescript
+// Decode the base64 string
+const binaryString = atob(audioAccumulator);
+const len = binaryString.length;
+const bytes = new Uint8Array(len);
+
+for (let i = 0; i < len; i++) {
+  bytes[i] = binaryString.charCodeAt(i);
+}
+
+// Create a Blob and generate a playable URL
+const blob = new Blob([bytes], { type: mimeType });
+const audioUrl = URL.createObjectURL(blob);
+
+// Play the audio
+const audio = new Audio(audioUrl);
+audio.play();
+```
