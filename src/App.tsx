@@ -16,6 +16,7 @@ import { Menu } from './components/Menu';
 import { Generating } from './components/Generating';
 import { Game } from './components/Game';
 import { Result } from './components/Result';
+import { AdSense } from './components/AdSense';
 import { generateSong } from './services/audioService';
 import { generateBeatmap, generatePrompt, getStructure } from './game/beatmap';
 import { Note, GameResult, DurationMode, GenerationOptions } from './types';
@@ -167,20 +168,25 @@ export default function App() {
   };
 
   return (
-    <>
-      {appState === 'menu' && <Menu onStart={handleStart} onSelectLibrarySong={handleSelectLibrarySong} errorMsg={errorMsg} hasKey={hasKey} onSelectKey={handleSelectKey} />}
-      {appState === 'generating' && <Generating />}
-      {appState === 'loading' && (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 text-white p-8">
-          <div className="relative w-16 h-16 mb-8">
-            <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+    <div className="flex flex-col min-h-screen bg-zinc-950">
+      <div className="flex-grow flex flex-col">
+        {appState === 'menu' && <Menu onStart={handleStart} onSelectLibrarySong={handleSelectLibrarySong} errorMsg={errorMsg} hasKey={hasKey} onSelectKey={handleSelectKey} />}
+        {appState === 'generating' && <Generating />}
+        {appState === 'loading' && (
+          <div className="flex flex-col items-center justify-center flex-grow text-white p-8">
+            <div className="relative w-16 h-16 mb-8">
+              <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight">Loading track...</h2>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight">Loading track...</h2>
-        </div>
-      )}
-      {appState === 'playing' && audioUrl && <Game audioUrl={audioUrl} beatmap={beatmap} onComplete={handleGameComplete} onStop={handleRestart} />}
-      {appState === 'result' && gameResult && <Result result={gameResult} onReplay={handleReplay} onMenu={handleRestart} />}
-    </>
+        )}
+        {appState === 'playing' && audioUrl && <Game audioUrl={audioUrl} beatmap={beatmap} onComplete={handleGameComplete} onStop={handleRestart} />}
+        {appState === 'result' && gameResult && <Result result={gameResult} onReplay={handleReplay} onMenu={handleRestart} />}
+      </div>
+      
+      {/* Show ads only on non-gameplay screens if preferred, or everywhere */}
+      {(appState === 'menu' || appState === 'result') && <AdSense />}
+    </div>
   );
 }
